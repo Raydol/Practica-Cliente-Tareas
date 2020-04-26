@@ -44,7 +44,7 @@ var index = -1;
 
 document.getElementById("boton").onclick = crearTarea;
 document.getElementById("ordenPrio").onclick = ordenarPorPrioridad;
-//document.getElementById("borrarRealizadas").onclick = borrarTareasRealizadas;
+document.getElementById("borrarRealizadas").onclick = borrarTareasRealizadas;
 
 comprobarLista();
 
@@ -98,17 +98,34 @@ function ordenarPorPrioridad() {
         }
     });
     index = -1;
+
     for (let tarea of tareas) {
         index++;
-        listarTarea(tarea, index);
+        if (tarea.estado != "borrada") {
+            listarTarea(tarea, index);
+        }
     }
-
 }
 
 /*
+  Esta función borra las tareas realizadas de la lista (no del array) y les establece un tercer estado que es "borrada". Para asi cuando ordenemos 
+  otras nuevas tareas o las que ya estaban, no vuelvan a aparecer las tareas borradas.
+*/
 function borrarTareasRealizadas() {
 
-}*/
+    document.getElementById("lista").innerHTML = "";
+    index = -1;
+    for (let tarea of tareas) {
+        index++;
+        if (tarea.estado == "pendiente") {
+            listarTarea(tarea, index);
+        } else if (tarea.estado == "realizada") {
+            tarea.estado = "borrada";
+        }
+    }
+    comprobarLista();
+    comprobarArray();
+}
 
 
 /*
@@ -131,7 +148,7 @@ function comprobarLista() {
 
 
 /*
-  Esta función añade a la lista una tarea. Es tan sólo de ayuda para no repetir código.
+  Esta función añade a la lista una tarea.
 */
 function listarTarea(tarea, index) {
 
@@ -157,8 +174,24 @@ function listarTarea(tarea, index) {
     li.appendChild(divTarea);
 
     lista.appendChild(li);
-    if (index == 0) {
-        comprobarLista();
+    comprobarLista();
+}
+
+
+/*
+  Esta función comprueba si el array solo tiene tareas borradas y si es así lo vacía.
+*/
+function comprobarArray() {
+    let contadorBorradas = 0;
+    for (let tarea of tareas) {
+        if (tarea.estado == "borrada") {
+            contadorBorradas++;
+        }
+    }
+
+    if (contadorBorradas == tareas.length) {
+        tareas = [];
+        index = -1;
     }
 }
 
