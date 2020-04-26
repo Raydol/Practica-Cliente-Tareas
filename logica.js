@@ -132,6 +132,7 @@ function borrarTareasRealizadas() {
   Esta función comprueba si la lista está vacía y si lo está, oculta los botones de ordenación y borrado para evitar errores.
 */
 function comprobarLista() {
+
     var botonesFiltrado = document.getElementsByClassName("filtrados");
     var lista = document.getElementById("lista");
 
@@ -182,6 +183,7 @@ function listarTarea(tarea, index) {
   Esta función comprueba si el array solo tiene tareas borradas y si es así lo vacía.
 */
 function comprobarArray() {
+    
     let contadorBorradas = 0;
     for (let tarea of tareas) {
         if (tarea.estado == "borrada") {
