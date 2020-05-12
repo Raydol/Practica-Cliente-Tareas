@@ -1,203 +1,198 @@
-
 /*
   Aquí creo el objeto principal de la práctica, Tarea.
 */
-function Tarea (texto, prioridad, estado) {
-    this.texto = texto;
-    this.prioridad = prioridad;
-    this.estado = estado;
-
-    this.establecerPrioridad = (prioridad) => {
-        if (prioridad == "prioridad3") {
-            this.prioridad = 2;
-            return "prioridad2";
-        } else if (prioridad == "prioridad2") {
-            this.prioridad = 1;
-            return "prioridad1";
-        } else {
-            this.prioridad = 3;
-            return "prioridad3";
-        }
-    };
-
-    this.establecerEstado = (estado) => {
-        if (estado == "realizada") {
-            this.estado = "pendiente";
-            return "pendiente";
-        } else {
-            this.estado = "realizada";
-            return "realizada";
-        }
-    }
+function Tarea () {
+    this.id;
+    this.texto;
+    this.prioridad;
+    this.estado;
 }
+//Esta variable orden se encarga de saber si ha sido pulsado o no el botón de ordenación por prioridad
+//para que siempre esté activo a menos que se pulse el contrario de no ordenar.
+var orden = false;
+//Esta variable me sirve para incluir en el sessionStorage cada tarea creada sin conexión controlando su indice como si fuera un array indexado.
+var index = 0;
 
-var tareas = [];
-
-/* 
-  - Index es una variable global que uso para saber en la lista de tareas, qué tarea es cada una según su posición en el array.
-  - Me sirve para colocar en cada hijo de li un atributo id cuyo valor es el index (la posición que ocupa en el array).
-  - No sé si es la mejor decisión, y cuál sería mejor para saber qué tarea de la lista de tareas es cual dentro del array.
-  - Sea como sea tengo en mente alguna forma de hacer los filtrados por texto y las ordenaciones por prioridad y borrados siguiendo esta línea de
-    la variable global index si no te parece mala idea.
-*/
-var index = -1;
-
+//Este evento onload asocia la función ajax para mostrar el listado de tareas al inicio de la aplicación por si hay alguna guardada
+//en la base de datos.
+onload = ajax;
 document.getElementById("boton").onclick = crearTarea;
 document.getElementById("ordenPrio").onclick = ordenarPorPrioridad;
-document.getElementById("borrarRealizadas").onclick = borrarTareasRealizadas;
+document.getElementById("borrar").onclick = borrar;
+document.getElementById("stopOrdenPrio").onclick = function() {
+  orden = false;
+  ajax();
+};
 
-comprobarLista();
 
-/*
-  Este es el manejador de eventos que llamo cuando quiero crear una nueva tarea. Por defecto su prioridad es 3 y su estado pendiente.
-*/
 function crearTarea() {
-    let inputTexto = document.getElementById("texto");
-    let tarea = new Tarea(inputTexto.value, 3, "pendiente");
-    tareas.push(tarea);
-    index++;
-    listarTarea(tarea, index);
-    inputTexto.value = "";
+  let texto = document.getElementById("texto").value;
+  let prioridad = 3;
+  let estado = "pendiente";
 
+  let tarea = new Tarea();
+  tarea.texto = texto;
+  tarea.prioridad = prioridad;
+  tarea.estado = estado;
+
+  document.getElementById("texto").value = "";
+  ajax(tarea, "annadir");
 }
 
-/*
-  Este es el manejador que lleva el cambio de prioridad si el cuadrado es pulsado, sirviéndose del metodo establecerPrioridad del objeto Tarea
-  encapsulado como me dijiste.
-*/
-function manejadorPrioridad() {
-    let tarea = tareas[this.parentNode.getAttribute("id")];
-    this.setAttribute("id", tarea.establecerPrioridad(this.getAttribute("id")));
-}
-/*
-  Y este lo mismo, pero el manejador del estado si el texto de la tarea es pulsado.
-*/
-function manejadorEstado() {
-    let tarea = tareas[this.parentNode.getAttribute("id")];
-    this.setAttribute("id", tarea.establecerEstado(this.getAttribute("id")));
+function modificarPrioridad() {
+  let li = this.parentNode.parentNode;
+  let tarea = new Tarea;
+  tarea.id = li.getAttribute("id");
+  ajax(tarea, "modificarPrioridad");
 }
 
+function modificarEstado() {
+  let li = this.parentNode.parentNode;
+  let tarea = new Tarea;
+  tarea.id = li.getAttribute("id");
+  ajax(tarea, "modificarEstado");
+}
 
-/*
-  Esta función es la encargada de ordenar todas las tareas de la lista por su prioridad.
-*/
 function ordenarPorPrioridad() {
-
-    document.getElementById("lista").innerHTML = "";
-    tareas.sort((a, b) => {
-        if (a.prioridad > b.prioridad) {
-            return 1;
-        }
-
-        if (a.prioridad < b.prioridad) {
-            return -1;
-        }
-
-        if (a.prioridad == b.prioridad) {
-            return 0;
-        }
-    });
-    index = -1;
-
-    for (let tarea of tareas) {
-        index++;
-        if (tarea.estado != "borrada") {
-            listarTarea(tarea, index);
-        }
-    }
+  let lista = document.getElementById("lista");
+      ajax(undefined, "ordenarPorPrioridad");
+      orden = true;
 }
 
-/*
-  Esta función borra las tareas realizadas de la lista (no del array) y les establece un tercer estado que es "borrada". Para asi cuando ordenemos 
-  otras nuevas tareas o las que ya estaban, no vuelvan a aparecer las tareas borradas.
-*/
-function borrarTareasRealizadas() {
-
-    document.getElementById("lista").innerHTML = "";
-    index = -1;
-    for (let tarea of tareas) {
-        index++;
-        if (tarea.estado == "pendiente") {
-            listarTarea(tarea, index);
-        } else if (tarea.estado == "realizada") {
-            tarea.estado = "borrada";
-        }
-    }
-    comprobarLista();
-    comprobarArray();
+function borrar() {
+  let lista = document.getElementById("lista");
+      ajax(undefined, "borrar")
 }
 
 
 /*
-  Esta función comprueba si la lista está vacía y si lo está, oculta los botones de ordenación y borrado para evitar errores.
+  Función encargada de comunicarse con el servidor, el cual añade, modifica, ordena, borra y tras eso,
+  nos envía un json con las tareas para volverlas a pintar en la lista ya modificadas.
+
+  Utilizo AJAX y no Fetch porque no sabía como manejar el status 200 para saber si tenía o no conectividad. Empecé haciendo fetch 
+  para la primera funcionalidad y cuando ya tenía todo, a la hora de hacer la segunda para comprobar si hay o no conectividad y usar el 
+  almacenamiento local tuve que cambiar todo.
+
+  Ahora pensando puedo enviarme desde el servidor un código en la respuesta http y si ese código no me ha llegado es porque no ha sido
+  capaz de conectarse con el servidor y de ahi usar esa condición. Se me acaba de ocurrir pero quería enviartelo ya para quitarmelo de encima 
+  y seguir con lo siguiente que me propongas.
+
+  - El parámetro 1 es la tarea (cuando la necesitamos, si no, la creo para añadirle un atributo que representa la opción a ejecutar en el servidor,
+    para así enviarlo más fácilmente en el cuerpo de la petición).
+  - El parámetro 2 es la opcion, la cual inserto en la tarea para enviarlo más fácilmente al servidor.
 */
-function comprobarLista() {
+function ajax(tarea = new Tarea, opcion = "listar") {
+  var req;
+  tarea.opcion = opcion;
+  if (orden) {
+    tarea.orden = true;
+  }
 
-    var botonesFiltrado = document.getElementsByClassName("filtrados");
-    var lista = document.getElementById("lista");
+  if (window.XMLHttpRequest) {
+    req = new XMLHttpRequest();
+  } else if (window.ActiveXObject) {
+    req = ActiveXObject("Microsoft.XMLHTTP");
+  }
 
-    if (lista.childNodes.length == 0) {
-        for (let boton of botonesFiltrado) {
-            boton.style.display = "none";
-        }
-    } else {
-        for (let boton of botonesFiltrado) {
-            boton.style.display = "inline-block";
-        }
-    }
+  if (req) {
+      req.onreadystatechange = function () {
+          if (req.readyState == 4) {
+              if (req.status == 200) {
+                  var type = req.getResponseHeader("Content-Type");
+                  if (type === "application/json") {
+                      listarTareas(JSON.parse(req.responseText));
+                  }
+              } else {
+                if (opcion != "annadir") {
+                  alert("No hay conexión con el servidor,\nsin conexión solo puedes agregar tareas y estás se almacenarán y serán mostradas cuando vuelva a haber conexión");
+                } else {
+                  let task = new Tarea();
+                  task.texto = tarea.texto;
+                  task.prioridad = tarea.prioridad;
+                  task.estado = tarea.estado;
+                  guardarTareaEnSessionStorage(task);
+                }
+              }
+          }
+      }
+
+        req.open("POST", "servidor.php");
+        req.send(JSON.stringify(tarea));
+
+  }
 }
-
 
 /*
-  Esta función añade a la lista una tarea.
+  Esta función es la que recibe los datos que nos llegan del servidor y pinta en la lista todas las tareas.
 */
-function listarTarea(tarea, index) {
+function listarTareas(tareas) {
+  document.getElementById("lista").innerHTML = "";
+  if (tareas.length > 0) {
+    for(let tarea of tareas) {
+      let lista = document.getElementById("lista");
+      let li = document.createElement("li");
+      let divTarea = document.createElement("div");
+      let divPrioridad = document.createElement("div");
+      let parrafoTexto = document.createElement("p");
+      
+      li.setAttribute("id", tarea.id);
+      parrafoTexto.setAttribute("class", tarea.estado);
+      divPrioridad.setAttribute("class", "prioridad prioridad" + tarea.prioridad);
+      
+      divPrioridad.onclick = modificarPrioridad;
+      parrafoTexto.onclick = modificarEstado;
 
-    let lista = document.getElementById("lista");
-    let inputTexto = tarea.texto;
-    let li = document.createElement("li");
-    let divTarea = document.createElement("div");
-    let divPrioridad = document.createElement("div");
-    let parrafoTexto = document.createElement("p");
+      parrafoTexto.innerHTML = tarea.texto;
 
-    divTarea.setAttribute("id", index);
-    parrafoTexto.setAttribute("id", tarea.estado);
-    divPrioridad.setAttribute("class", "prioridad");
-    divPrioridad.setAttribute("id", "prioridad" + tarea.prioridad);
+      divTarea.appendChild(divPrioridad);
+      divTarea.appendChild(parrafoTexto);
 
-    divPrioridad.onclick = manejadorPrioridad;
-    parrafoTexto.onclick = manejadorEstado;
+      li.appendChild(divTarea);
 
-    parrafoTexto.innerHTML = inputTexto;
+      lista.appendChild(li);
 
-    divTarea.appendChild(divPrioridad);
-    divTarea.appendChild(parrafoTexto);
-    li.appendChild(divTarea);
-
-    lista.appendChild(li);
-    comprobarLista();
+    }
+  }
 }
-
 
 /*
-  Esta función comprueba si el array solo tiene tareas borradas y si es así lo vacía.
+  Esta función guarda en el almacenamiento local cada una de las tareas que se han creado cuando no habia conexión.
+  Las almacena sólo hasta que se cierra el navegador, probé tambien el localstorage que las guarda indefinidamente.
 */
-function comprobarArray() {
-    
-    let contadorBorradas = 0;
-    for (let tarea of tareas) {
-        if (tarea.estado == "borrada") {
-            contadorBorradas++;
-        }
-    }
+function guardarTareaEnSessionStorage(task) {
+  sessionStorage[index] = JSON.stringify(task);
+  index++;
 
-    if (contadorBorradas == tareas.length) {
-        tareas = [];
-        index = -1;
-    }
 }
 
+/*
+  Esta función comprueba cada 5 segundos si hay o no conectividad con el servidor y, si la hay, añade todas las tareas
+  guardadas del sessionStorage en el servidor y en la lista.
 
+  Uso AJAX por lo mismo que comentaba antes
+*/
+setInterval(function() {
+  var req;
+  if (window.XMLHttpRequest) {
+    req = new XMLHttpRequest();
+  } else if (window.ActiveXObject) {
+    req = ActiveXObject("Microsoft.XMLHTTP");
+  }
 
+  if (req) {
+      req.onreadystatechange = function () {
+          if (req.readyState == 4) {
+              if (req.status == 200) {
+                for (let i = 0; i < sessionStorage.length; i++) {
+                  ajax(JSON.parse(sessionStorage[i]), "annadir");
+                }
+                sessionStorage.clear();
+                index = 0;
+              }
+          }
+      }
+      req.open("GET", "servidor.php");
+      req.send();
+  }
 
-
+}, 5000);
